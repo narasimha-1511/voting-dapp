@@ -107,7 +107,7 @@ export function AccountTokens({ address }: { address: PublicKey }) {
   return (
     <div className="space-y-2">
       <div className="justify-between">
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center gap-60">
           <h2 className="text-2xl font-bold">Token Accounts</h2>
           <div className="space-x-2">
             {query.isLoading ? (

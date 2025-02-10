@@ -26,7 +26,7 @@ export default function AccountDetailFeature() {
   }
 
   return (
-    <div>
+    <div className="p-4 flex flex-col gap-4">
       <AppHero
         title={<AccountBalance address={address} />}
         subtitle={
@@ -39,7 +39,7 @@ export default function AccountDetailFeature() {
           <AccountButtons address={address} />
         </div>
       </AppHero>
-      <div className="space-y-8">
+      <div className="space-y-8 flex flex-col max-w-10xl mx-auto">
         <AccountTokens address={address} />
         <AccountTransactions address={address} />
       </div>

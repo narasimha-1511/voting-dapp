@@ -5,6 +5,26 @@ import {usePathname} from 'next/navigation'
 import * as React from 'react'
 import {ReactNode, Suspense, useEffect, useRef} from 'react'
 import toast, {Toaster} from 'react-hot-toast'
+import { 
+  AppBar,
+  Toolbar,
+  Typography,
+  Box,
+  Container,
+  Button,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  useMediaQuery,
+  useTheme,
+  alpha,
+  useScrollTrigger
+} from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
+import HowToVoteIcon from '@mui/icons-material/HowToVote'
+import { motion, useScroll, useTransform } from 'framer-motion'
 
 import {AccountChecker} from '../account/account-ui'
 import {ClusterChecker, ClusterUiSelect, ExplorerLink} from '../cluster/cluster-ui'
@@ -12,60 +32,214 @@ import {WalletButton} from '../solana/solana-provider'
 
 export function UiLayout({ children, links }: { children: ReactNode; links: { label: string; path: string }[] }) {
   const pathname = usePathname()
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [mobileOpen, setMobileOpen] = React.useState(false)
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen)
+  }
+
+  const trigger = useScrollTrigger({
+    disableHysteresis: true,
+    threshold: 0,
+  })
+
+  const { scrollY } = useScroll()
+  const headerBg = useTransform(
+    scrollY,
+    [0, 100],
+    ['rgba(26, 35, 126, 0.98)', 'rgba(13, 71, 161, 0.98)']
+  )
+
+  const NavLinks = () => (
+    <>
+      {links.map(({ label, path }) => (
+        <Button
+          key={path}
+          component={Link}
+          href={path}
+          sx={{
+            mx: 1,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              width: pathname.startsWith(path) ? '100%' : '0%',
+              height: '2px',
+              bottom: 0,
+              left: 0,
+              backgroundColor: 'white',
+              transition: 'width 0.3s ease-in-out'
+            },
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              '&::after': {
+                width: '100%'
+              }
+            },
+            ...(pathname.startsWith(path) && {
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 1,
+              }
+            })
+          }}
+        >
+          <motion.span
+            initial={{ y: 0 }}
+            whileHover={{ y: -2 }}
+            transition={{ duration: 0.2 }}
+          >
+            {label}
+          </motion.span>
+        </Button>
+      ))}
+    </>
+  )
+
+  const drawer = (
+    <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
+      <Typography variant="h6" sx={{ my: 2 }}>
+        <HowToVoteIcon sx={{ mr: 1 }} />
+        Voting
+      </Typography>
+      <List>
+        {links.map(({ label, path }) => (
+          <ListItem 
+            key={path} 
+            component={Link}
+            href={path}
+            sx={{
+              backgroundColor: pathname.startsWith(path) 
+                ? alpha(theme.palette.primary.main, 0.1)
+                : 'transparent'
+            }}
+          >
+            <ListItemText 
+              primary={label} 
+              sx={{ 
+                textAlign: 'center',
+                color: pathname.startsWith(path) 
+                  ? theme.palette.primary.main
+                  : theme.palette.text.primary
+              }}
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  )
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="navbar bg-base-300 dark:text-neutral-content flex-col md:flex-row space-y-2 md:space-y-0">
-        <div className="flex-1">
-          <Link className="btn btn-ghost normal-case text-xl" href="/">
-            Voting
-          </Link>
-          <ul className="menu menu-horizontal px-1 space-x-2">
-            {links.map(({ label, path }) => (
-              <li key={path}>
-                <Link className={pathname.startsWith(path) ? 'active' : ''} href={path}>
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="flex-none space-x-2">
-          <WalletButton />
-          <ClusterUiSelect />
-        </div>
-      </div>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <motion.div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1100,
+          backgroundColor: headerBg,
+        }}
+      >
+        <AppBar 
+          position="static" 
+          elevation={trigger ? 4 : 0}
+          sx={{ 
+            background: 'transparent',
+            transition: 'all 0.3s',
+            backdropFilter: trigger ? 'blur(10px)' : 'none',
+          }}
+        >
+          <Container maxWidth="xl">
+            <Toolbar sx={{ justifyContent: 'space-between' }}>
+              {isMobile && (
+                <IconButton
+                  color="inherit"
+                  aria-label="open drawer"
+                  edge="start"
+                  onClick={handleDrawerToggle}
+                  sx={{ mr: 2 }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+              
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <HowToVoteIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+                <Typography
+                  variant="h6"
+                  noWrap
+                  component={Link}
+                  href="/"
+                  sx={{
+                    mr: 2,
+                    display: { xs: 'none', md: 'flex' },
+                    fontWeight: 700,
+                    color: 'inherit',
+                    textDecoration: 'none',
+                  }}
+                >
+                  Voting
+                </Typography>
+                
+                {!isMobile && <NavLinks />}
+              </Box>
+
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <WalletButton />
+                <ClusterUiSelect />
+              </Box>
+            </Toolbar>
+          </Container>
+        </AppBar>
+      </motion.div>
+
+      <Box sx={{ height: { xs: '64px', sm: '64px' } }} />
+
+      <Drawer
+        variant="temporary"
+        anchor="left"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        sx={{
+          display: { xs: 'block', md: 'none' },
+          '& .MuiDrawer-paper': { boxSizing: 'border-box', width: 240 },
+        }}
+      >
+        {drawer}
+      </Drawer>
+
       <ClusterChecker>
         <AccountChecker />
       </ClusterChecker>
-      <div className="flex-grow mx-4 lg:mx-auto">
+
+      <Box component="main" sx={{ flexGrow: 1 }}>
         <Suspense
           fallback={
-            <div className="text-center my-32">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Typography>Loading...</Typography>
+            </Box>
           }
         >
           {children}
         </Suspense>
-        <Toaster position="bottom-right" />
-      </div>
-      <footer className="footer footer-center p-4 bg-base-300 text-base-content">
-        <aside>
-          <p>
-            Generated by{' '}
-            <a
-              className="link hover:text-white"
-              href="https://github.com/solana-developers/create-solana-dapp"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              create-solana-dapp
-            </a>
-          </p>
-        </aside>
-      </footer>
-    </div>
+      </Box>
+
+      <Toaster position="bottom-right" />
+    </Box>
   )
 }
 

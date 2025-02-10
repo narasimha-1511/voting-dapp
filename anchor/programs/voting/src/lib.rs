@@ -8,63 +8,130 @@ declare_id!("coUnmi3oBUtwtd9fjeAvSsJssXh5A5xyPbhpewyzRVF");
 pub mod voting {
     use super::*;
 
-  pub fn close(_ctx: Context<CloseVoting>) -> Result<()> {
-    Ok(())
-  }
+    pub fn initialize_poll(
+      ctx: Context<InitializePoll>,
+      poll_id: u64,
+      description: String,
+      poll_start: u64,
+      poll_end: u64,
+    //  candidate_amount: u64,
+    )-> Result<()> 
+    {
+      let poll = &mut ctx.accounts.poll;
+      poll.poll_id = poll_id;
+      poll.description = description;
+      poll.poll_start = poll_start;
+      poll.poll_end = poll_end;
+      poll.candidate_amount = 0;
+      Ok(())
+    }
 
-  pub fn decrement(ctx: Context<Update>) -> Result<()> {
-    ctx.accounts.voting.count = ctx.accounts.voting.count.checked_sub(1).unwrap();
-    Ok(())
-  }
+    pub fn initialize_candidate(
+      ctx: Context<InitializeCandidate>,
+      poll_id: u64,
+      candidate_id: u64,
+      candidate_name: String,
+    )-> Result<()>
+    {
+      let poll = &mut ctx.accounts.poll;
+      poll.candidate_amount += 1;
 
-  pub fn increment(ctx: Context<Update>) -> Result<()> {
-    ctx.accounts.voting.count = ctx.accounts.voting.count.checked_add(1).unwrap();
-    Ok(())
-  }
+      let candidate = &mut ctx.accounts.candidate;
+      candidate.poll_id = poll_id;
+      candidate.candidate_id = candidate_id;
+      candidate.candidate_name = candidate_name;
+      candidate.candidate_votes = 0;
+      Ok(())
+    }
 
-  pub fn initialize(_ctx: Context<InitializeVoting>) -> Result<()> {
-    Ok(())
-  }
-
-  pub fn set(ctx: Context<Update>, value: u8) -> Result<()> {
-    ctx.accounts.voting.count = value.clone();
-    Ok(())
-  }
+    pub fn vote(ctx: Context<Vote>, _poll_id: u64, _candidate_id: u64)-> Result<()>
+    {
+      let candidate = &mut ctx.accounts.candidate;
+      candidate.candidate_votes += 1;
+      Ok(())
+    }
+      
 }
 
 #[derive(Accounts)]
-pub struct InitializeVoting<'info> {
-  #[account(mut)]
-  pub payer: Signer<'info>,
+#[instruction(poll_id: u64 , candidate_id: u64)]
+pub struct Vote<'info> {
+
+  pub signer: Signer<'info>,
 
   #[account(
-  init,
-  space = 8 + Voting::INIT_SPACE,
-  payer = payer
+    seeds = [poll_id.to_le_bytes().as_ref()],
+    bump,
   )]
-  pub voting: Account<'info, Voting>,
+  pub poll: Account<'info, Poll>,
+
+  #[account(
+    mut,
+    seeds = [poll_id.to_le_bytes().as_ref(), candidate_id.to_le_bytes().as_ref()],
+    bump,
+  )]
+  pub candidate: Account<'info, Candidate>
+}
+
+#[derive(Accounts)]
+#[instruction(poll_id: u64 , candidate_id: u64 , candidate_name: String)]
+pub struct InitializeCandidate<'info> {
+  #[account(mut)]
+  pub signer: Signer<'info>,
+
+  #[account(
+    seeds = [poll_id.to_le_bytes().as_ref()],
+    bump,
+  )]
+  pub poll: Account<'info, Poll>,
+
+  #[account(
+    init ,
+    payer = signer,
+    space = 8 + Candidate::INIT_SPACE,
+    seeds = [poll_id.to_le_bytes().as_ref(), candidate_id.to_le_bytes().as_ref()],
+    bump,
+  )]
+  pub candidate: Account<'info, Candidate>,
+
   pub system_program: Program<'info, System>,
 }
+
 #[derive(Accounts)]
-pub struct CloseVoting<'info> {
+#[instruction(poll_id: u64)]
+pub struct InitializePoll<'info> {
   #[account(mut)]
-  pub payer: Signer<'info>,
+  pub signer: Signer<'info>,
 
   #[account(
-  mut,
-  close = payer, // close account and return lamports to payer
+    init ,
+    payer = signer,
+    space = 8 + Poll::INIT_SPACE,
+    seeds = [poll_id.to_le_bytes().as_ref()],
+    bump,
   )]
-  pub voting: Account<'info, Voting>,
-}
+  pub poll: Account<'info, Poll>,
 
-#[derive(Accounts)]
-pub struct Update<'info> {
-  #[account(mut)]
-  pub voting: Account<'info, Voting>,
+  pub system_program: Program<'info, System>,
 }
 
 #[account]
 #[derive(InitSpace)]
-pub struct Voting {
-  count: u8,
+pub struct Poll {
+  pub poll_id: u64,
+  #[max_len(280)]
+  pub description: String,
+  pub poll_start: u64,
+  pub poll_end: u64,
+  pub candidate_amount: u64,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct Candidate {
+  pub poll_id: u64,
+  pub candidate_id: u64,
+  #[max_len(32)]
+  pub candidate_name: String,
+  pub candidate_votes: u64,
 }
