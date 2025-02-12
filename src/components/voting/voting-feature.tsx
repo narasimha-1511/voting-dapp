@@ -331,7 +331,7 @@ export function VotingFeature() {
     }
   };
 
-  const handleVote = async (pollId: string, candidateId: string) => {
+  const handleVote = async (pollId: BN, candidateId: BN) => {
     if (!publicKey) {
       setError('Please connect your wallet first');
       return;
@@ -340,30 +340,56 @@ export function VotingFeature() {
     try {
       const program = getVotingProgram(provider);
       
-      // Find the poll and candidate PDAs
-      const [pollPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("poll"),
-          Buffer.from(pollId)
-        ],
-        program.programId
-      );
+      console.log("Voting with pollId:", pollId.toString(), "candidateId:", candidateId.toString());
 
-      const [candidatePda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("candidate"),
-          pollPda.toBuffer(),
-          new BN(candidateId).toArrayLike(Buffer, 'le', 8)
-        ],
-        program.programId
-      );
+      // First get all polls to find the one we want to vote on
+      const allPolls = await program.account.poll.all();
+      const targetPoll = allPolls.find(p => p.account.pollId.eq(pollId));
+      const allCandidates = await program.account.candidate.all();
+      const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId));
+
+      
+      if (!targetPoll) {
+        throw new Error('Poll not found');
+      }
+
+      // Get poll details
+      const pollStartTime = targetPoll.account.pollStart;
+      const pollAuthority = targetPoll.publicKey;
+      
+      console.log("Poll details - start time:", pollStartTime.toString(), "authority:", pollAuthority.toString());
+      
+      // // Find the poll PDA using authority and start time
+      // const [pollPda] = PublicKey.findProgramAddressSync(
+      //   [
+      //     Buffer.from("poll"),
+      //     pollAuthority.toBuffer(),
+      //     pollStartTime.toArrayLike(Buffer, 'le', 8)
+      //   ],
+      //   program.programId
+      // );
+
+      // console.log("Poll PDA:", pollPda.toString());
+
+      let pollAccount = await program.account.poll.fetch(pollAuthority);
+
+      console.log("Poll Fteched", pollAccount);
+
+      // Find the candidate PDA using poll PDA and candidate ID
+      const candidatePda = targetCandidate?.publicKey;
+
+      let candidateAccount = await program.account.candidate.fetch(candidatePda);
+
+      console.log("Candidate Fetched", candidateAccount);
+
+      console.log("PDAs - poll:", pollAuthority.toString(), "candidate:", candidatePda.toString());
 
       // Submit vote transaction
       await program.methods
         .vote()
         .accounts({
-          authority: publicKey,
-          poll: pollPda,
+          signer: publicKey,
+          poll: pollAuthority,
           candidate: candidatePda,
         })
         .rpc();
@@ -574,7 +600,12 @@ export function VotingFeature() {
                                   variant="contained" 
                                   color="primary"
                                   size="large"
-                                  onClick={() => handleVote(poll.publicKey.toString(), candidate.candidateId.toString())}
+                                  onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
+                                  disabled={
+                                    !publicKey || // Not connected
+                                    Date.now() < poll.account.pollStart.toNumber() * 1000 || // Poll hasn't started
+                                    Date.now() > poll.account.pollEnd.toNumber() * 1000 // Poll has ended
+                                  }
                                   sx={{ 
                                     borderRadius: 2,
                                     px: 4,
@@ -589,7 +620,7 @@ export function VotingFeature() {
                                     }
                                   }}
                                 >
-                                  Vote Now
+                                  Vote
                                 </Button>
                               </Box>
                             </Paper>
