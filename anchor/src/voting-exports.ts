@@ -19,9 +19,10 @@ export function getVotingProgram(provider: AnchorProvider, address?: PublicKey) 
 export function getVotingProgramId(cluster: Cluster) {
   switch (cluster) {
     case 'devnet':
+      return new PublicKey('2Ud7vN7zRFuZCfjYhD3r2TWkCQRGtadVmAW9hoCNcG4j')
     case 'testnet':
       // This is the program ID for the Voting program on devnet and testnet.
-      return new PublicKey('coUnmi3oBUtwtd9fjeAvSsJssXh5A5xyPbhpewyzRVF')
+      return new PublicKey('2Ud7vN7zRFuZCfjYhD3r2TWkCQRGtadVmAW9hoCNcG4j')
     case 'mainnet-beta':
     default:
       return VOTING_PROGRAM_ID

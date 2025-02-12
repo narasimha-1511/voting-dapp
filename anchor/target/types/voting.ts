@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/voting.json`.
  */
 export type Voting = {
-  "address": "coUnmi3oBUtwtd9fjeAvSsJssXh5A5xyPbhpewyzRVF",
+  "address": "2Ud7vN7zRFuZCfjYhD3r2TWkCQRGtadVmAW9hoCNcG4j",
   "metadata": {
     "name": "voting",
     "version": "0.1.0",
@@ -27,20 +27,13 @@ export type Voting = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
           "signer": true
         },
         {
           "name": "poll",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "pollId"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "candidate",
@@ -48,12 +41,27 @@ export type Voting = {
           "pda": {
             "seeds": [
               {
-                "kind": "arg",
-                "path": "pollId"
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  110,
+                  100,
+                  105,
+                  100,
+                  97,
+                  116,
+                  101
+                ]
               },
               {
-                "kind": "arg",
-                "path": "candidateId"
+                "kind": "account",
+                "path": "poll"
+              },
+              {
+                "kind": "account",
+                "path": "poll.next_candidate_id",
+                "account": "poll"
               }
             ]
           }
@@ -64,14 +72,6 @@ export type Voting = {
         }
       ],
       "args": [
-        {
-          "name": "pollId",
-          "type": "u64"
-        },
-        {
-          "name": "candidateId",
-          "type": "u64"
-        },
         {
           "name": "candidateName",
           "type": "string"
@@ -92,7 +92,7 @@ export type Voting = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "authority",
           "writable": true,
           "signer": true
         },
@@ -102,8 +102,21 @@ export type Voting = {
           "pda": {
             "seeds": [
               {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  108,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
                 "kind": "arg",
-                "path": "pollId"
+                "path": "pollStart"
               }
             ]
           }
@@ -115,10 +128,6 @@ export type Voting = {
       ],
       "args": [
         {
-          "name": "pollId",
-          "type": "u64"
-        },
-        {
           "name": "description",
           "type": "string"
         },
@@ -129,6 +138,10 @@ export type Voting = {
         {
           "name": "pollEnd",
           "type": "u64"
+        },
+        {
+          "name": "name",
+          "type": "string"
         }
       ]
     },
@@ -151,42 +164,14 @@ export type Voting = {
         },
         {
           "name": "poll",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "pollId"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "candidate",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "pollId"
-              },
-              {
-                "kind": "arg",
-                "path": "candidateId"
-              }
-            ]
-          }
+          "writable": true
         }
       ],
-      "args": [
-        {
-          "name": "pollId",
-          "type": "u64"
-        },
-        {
-          "name": "candidateId",
-          "type": "u64"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -215,6 +200,38 @@ export type Voting = {
         153,
         111
       ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "invalidPollEndTime",
+      "msg": "Poll end time must be after start time"
+    },
+    {
+      "code": 6001,
+      "name": "pollStartTimeInPast",
+      "msg": "Poll start time must be in the future"
+    },
+    {
+      "code": 6002,
+      "name": "pollDurationTooLong",
+      "msg": "Poll duration is too long. Maximum duration is 30 days"
+    },
+    {
+      "code": 6003,
+      "name": "pollNotStarted",
+      "msg": "Poll has not started yet"
+    },
+    {
+      "code": 6004,
+      "name": "pollEnded",
+      "msg": "Poll has already ended"
+    },
+    {
+      "code": 6005,
+      "name": "invalidCandidate",
+      "msg": "Candidate can't be added once poll has started"
     }
   ],
   "types": [
@@ -252,6 +269,10 @@ export type Voting = {
             "type": "u64"
           },
           {
+            "name": "name",
+            "type": "string"
+          },
+          {
             "name": "description",
             "type": "string"
           },
@@ -265,6 +286,10 @@ export type Voting = {
           },
           {
             "name": "candidateAmount",
+            "type": "u64"
+          },
+          {
+            "name": "nextCandidateId",
             "type": "u64"
           }
         ]
