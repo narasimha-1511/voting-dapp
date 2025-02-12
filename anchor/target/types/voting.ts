@@ -164,42 +164,14 @@ export type Voting = {
         },
         {
           "name": "poll",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "pollId"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "candidate",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "pollId"
-              },
-              {
-                "kind": "arg",
-                "path": "candidateId"
-              }
-            ]
-          }
+          "writable": true
         }
       ],
-      "args": [
-        {
-          "name": "pollId",
-          "type": "u64"
-        },
-        {
-          "name": "candidateId",
-          "type": "u64"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
