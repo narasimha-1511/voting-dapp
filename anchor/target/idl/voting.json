@@ -158,42 +158,14 @@
         },
         {
           "name": "poll",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "poll_id"
-              }
-            ]
-          }
+          "writable": true
         },
         {
           "name": "candidate",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "arg",
-                "path": "poll_id"
-              },
-              {
-                "kind": "arg",
-                "path": "candidate_id"
-              }
-            ]
-          }
+          "writable": true
         }
       ],
-      "args": [
-        {
-          "name": "_poll_id",
-          "type": "u64"
-        },
-        {
-          "name": "_candidate_id",
-          "type": "u64"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
