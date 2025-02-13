@@ -49,7 +49,7 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
   const headerBg = useTransform(
     scrollY,
     [0, 100],
-    ['rgba(26, 35, 126, 0.98)', 'rgba(13, 71, 161, 0.98)']
+    ['rgba(28, 29, 33, 0.95)', 'rgba(28, 29, 33, 0.98)']
   )
 
   const NavLinks = () => (
@@ -61,7 +61,7 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
           href={path}
           sx={{
             mx: 1,
-            color: 'white',
+            color: '#F1E3E4',
             position: 'relative',
             overflow: 'hidden',
             '&::after': {
@@ -71,11 +71,11 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
               height: '2px',
               bottom: 0,
               left: 0,
-              backgroundColor: 'white',
+              backgroundColor: '#A288A6',
               transition: 'width 0.3s ease-in-out'
             },
             '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(162, 136, 166, 0.1)',
               '&::after': {
                 width: '100%'
               }
@@ -88,7 +88,7 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'rgba(162, 136, 166, 0.1)',
                 borderRadius: 1,
               }
             })
@@ -157,7 +157,8 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
           sx={{ 
             background: 'transparent',
             transition: 'all 0.3s',
-            backdropFilter: trigger ? 'blur(10px)' : 'none',
+            backdropFilter: trigger ? 'blur(20px)' : 'none',
+            borderBottom: trigger ? '1px solid rgba(241, 227, 228, 0.1)' : 'none',
           }}
         >
           <Container maxWidth="xl">
@@ -168,14 +169,21 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
                   aria-label="open drawer"
                   edge="start"
                   onClick={handleDrawerToggle}
-                  sx={{ mr: 2 }}
+                  sx={{ 
+                    mr: 2,
+                    color: '#F1E3E4',
+                  }}
                 >
                   <MenuIcon />
                 </IconButton>
               )}
               
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <HowToVoteIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} />
+                <HowToVoteIcon sx={{ 
+                  display: { xs: 'none', md: 'flex' }, 
+                  mr: 1,
+                  color: '#A288A6',
+                }} />
                 <Typography
                   variant="h6"
                   noWrap
@@ -185,8 +193,9 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
                     mr: 2,
                     display: { xs: 'none', md: 'flex' },
                     fontWeight: 700,
-                    color: 'inherit',
+                    color: '#F1E3E4',
                     textDecoration: 'none',
+                    letterSpacing: '-0.02em',
                   }}
                 >
                   Voting
@@ -195,7 +204,18 @@ export function UiLayout({ children, links }: { children: ReactNode; links: { la
                 {!isMobile && <NavLinks />}
               </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                '& .wallet-adapter-button': {
+                  backgroundColor: '#A288A6',
+                  color: '#1C1D21',
+                  '&:hover': {
+                    backgroundColor: '#BB9BB0',
+                  }
+                }
+              }}>
                 <WalletButton />
                 <ClusterUiSelect />
               </Box>

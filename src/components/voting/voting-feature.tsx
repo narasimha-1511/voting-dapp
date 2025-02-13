@@ -53,29 +53,95 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
   const [description, setDescription] = useState('');
   const [pollStart, setPollStart] = useState('');
   const [pollEnd, setPollEnd] = useState('');
-  const [candidates, setCandidates] = useState<string[]>(['', '']); // Start with 2 empty candidates
+  const [candidates, setCandidates] = useState<string[]>(['', '']);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    description?: string;
+    pollStart?: string;
+    pollEnd?: string;
+    candidates?: string[];
+  }>({});
+
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+    
+    // Name validation
+    if (!name.trim()) {
+      newErrors.name = 'Poll name is required';
+    } else if (name.length < 3) {
+      newErrors.name = 'Poll name must be at least 3 characters';
+    } else if (name.length > 50) {
+      newErrors.name = 'Poll name must be less than 50 characters';
+    }
+
+    // Description validation
+    if (!description.trim()) {
+      newErrors.description = 'Description is required';
+    } else if (description.length < 10) {
+      newErrors.description = 'Description must be at least 10 characters';
+    } else if (description.length > 500) {
+      newErrors.description = 'Description must be less than 500 characters';
+    }
+
+    // Date validations
+    const startDate = new Date(pollStart);
+    const endDate = new Date(pollEnd);
+    const now = new Date();
+
+    if (!pollStart) {
+      newErrors.pollStart = 'Start date is required';
+    } else if (startDate < now) {
+      newErrors.pollStart = 'Start date cannot be in the past';
+    }
+
+    if (!pollEnd) {
+      newErrors.pollEnd = 'End date is required';
+    } else if (endDate <= startDate) {
+      newErrors.pollEnd = 'End date must be after start date';
+    }
+
+    // Candidates validation
+    const candidateErrors: string[] = [];
+    const nonEmptyCandidates = candidates.filter(c => c.trim());
+    
+    if (nonEmptyCandidates.length < 2) {
+      candidateErrors[0] = 'At least 2 candidates are required';
+    }
+
+    candidates.forEach((candidate, index) => {
+      if (!candidate.trim() && index < 2) {
+        candidateErrors[index] = 'Candidate name is required';
+      } else if (candidate.trim().length < 2) {
+        candidateErrors[index] = 'Name must be at least 2 characters';
+      }
+    });
+
+    if (candidateErrors.length > 0) {
+      newErrors.candidates = candidateErrors;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      name,
-      description,
-      pollStart,
-      pollEnd,
-      candidates: candidates.filter(c => c.trim() !== ''), // Only submit non-empty candidates
-    });
-    // Reset form
-    setName('');
-    setDescription('');
-    setPollStart('');
-    setPollEnd('');
-    setCandidates(['', '']);
-  };
-
-  const handleCandidateChange = (index: number, value: string) => {
-    const newCandidates = [...candidates];
-    newCandidates[index] = value;
-    setCandidates(newCandidates);
+    if (validateForm()) {
+      onSubmit({
+        name,
+        description,
+        pollStart,
+        pollEnd,
+        candidates: candidates.filter(c => c.trim() !== ''),
+      });
+      // Reset form
+      setName('');
+      setDescription('');
+      setPollStart('');
+      setPollEnd('');
+      setCandidates(['', '']);
+      setErrors({});
+    }
   };
 
   const addCandidate = () => {
@@ -90,48 +156,116 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Create New Poll</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          background: 'rgba(44, 46, 53, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(162, 136, 166, 0.3)',
+          borderRadius: '16px',
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        color: '#F1E3E4',
+        borderBottom: '1px solid rgba(162, 136, 166, 0.2)',
+        pb: 2,
+        fontSize: '1.5rem',
+        fontWeight: 'bold'
+      }}>
+        Create New Poll
+      </DialogTitle>
       <form onSubmit={handleSubmit}>
-        <DialogContent>
+        <DialogContent sx={{ mt: 2 }}>
           <Stack spacing={3}>
             <TextField
               label="Poll Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              error={!!errors.name}
+              helperText={errors.name}
               required
               fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: '#F1E3E4',
+                  '& fieldset': {
+                    borderColor: 'rgba(162, 136, 166, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(162, 136, 166, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#CCBCBC',
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ff6b6b',
+                }
+              }}
             />
             <TextField
               label="Description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              error={!!errors.description}
+              helperText={errors.description}
               required
               fullWidth
               multiline
               rows={3}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  color: '#F1E3E4',
+                  '& fieldset': {
+                    borderColor: 'rgba(162, 136, 166, 0.3)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'rgba(162, 136, 166, 0.5)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#CCBCBC',
+                },
+                '& .MuiFormHelperText-root': {
+                  color: '#ff6b6b',
+                }
+              }}
             />
-            <TextField
-              label="Start Date"
-              type="datetime-local"
-              value={pollStart}
-              onChange={(e) => setPollStart(e.target.value)}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="End Date"
-              type="datetime-local"
-              value={pollEnd}
-              onChange={(e) => setPollEnd(e.target.value)}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Start Date"
+                type="datetime-local"
+                value={pollStart}
+                onChange={(e) => setPollStart(e.target.value)}
+                error={!!errors.pollStart}
+                helperText={errors.pollStart}
+                required
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                sx={{ ...textFieldStyle }}
+                className='black-text'
+              />
+              <TextField
+                label="End Date"
+                type="datetime-local"
+                value={pollEnd}
+                onChange={(e) => setPollEnd(e.target.value)}
+                error={!!errors.pollEnd}
+                helperText={errors.pollEnd}
+                required
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                sx={{ ...textFieldStyle }}
+              />
+            </Box>
             
-            <div>
-              <Typography variant="subtitle1" gutterBottom>
+            <Box>
+              <Typography variant="subtitle1" sx={{ color: '#F1E3E4', mb: 2 }}>
                 Candidates
               </Typography>
               {candidates.map((candidate, index) => (
@@ -139,15 +273,27 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
                   <TextField
                     label={`Candidate ${index + 1}`}
                     value={candidate}
-                    onChange={(e) => handleCandidateChange(index, e.target.value)}
-                    required
+                    onChange={(e) => {
+                      const newCandidates = [...candidates];
+                      newCandidates[index] = e.target.value;
+                      setCandidates(newCandidates);
+                    }}
+                    error={!!errors.candidates?.[index]}
+                    helperText={errors.candidates?.[index]}
+                    required={index < 2}
                     fullWidth
+                    sx={{ ...textFieldStyle }}
                   />
                   {candidates.length > 2 && (
                     <IconButton 
                       onClick={() => removeCandidate(index)}
-                      color="error"
-                      sx={{ mt: 1 }}
+                      sx={{ 
+                        color: '#ff6b6b',
+                        '&:hover': {
+                          color: '#ff8787',
+                          backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        }
+                      }}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -159,20 +305,73 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
                 onClick={addCandidate}
                 variant="outlined"
                 size="small"
+                sx={{
+                  color: '#A288A6',
+                  borderColor: '#A288A6',
+                  '&:hover': {
+                    borderColor: '#BB9BB0',
+                    backgroundColor: 'rgba(162, 136, 166, 0.1)',
+                  }
+                }}
               >
                 Add Candidate
               </Button>
-            </div>
+            </Box>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained">Create Poll</Button>
+        <DialogActions sx={{ 
+          p: 3, 
+          borderTop: '1px solid rgba(162, 136, 166, 0.2)',
+          gap: 1
+        }}>
+          <Button 
+            onClick={onClose}
+            sx={{
+              color: '#CCBCBC',
+              '&:hover': {
+                backgroundColor: 'rgba(204, 188, 188, 0.1)',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained"
+            sx={{
+              backgroundColor: '#A288A6',
+              color: '#1C1D21',
+              '&:hover': {
+                backgroundColor: '#BB9BB0',
+              }
+            }}
+          >
+            Create Poll
+          </Button>
         </DialogActions>
       </form>
     </Dialog>
   );
 }
+
+// Common TextField styles
+const textFieldStyle = {
+  '& .MuiOutlinedInput-root': {
+    color: '#F1E3E4',
+    '& fieldset': {
+      borderColor: 'rgba(162, 136, 166, 0.3)',
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(162, 136, 166, 0.5)',
+    },
+  },
+  '& .MuiInputLabel-root': {
+    color: '#CCBCBC',
+  },
+  '& .MuiFormHelperText-root': {
+    color: '#ff6b6b',
+  }
+};
 
 export function VotingFeature() {
   const { connected, publicKey } = useWallet()
@@ -181,6 +380,16 @@ export function VotingFeature() {
   const [error, setError] = useState<string | null>(null)
   const [selectedPoll, setSelectedPoll] = useState<number | null>(null)
   const [createPollOpen, setCreatePollOpen] = useState(false)
+  const [isCreatingPoll, setIsCreatingPoll] = useState(false)
+  const [transactionStatus, setTransactionStatus] = useState<{
+    status: 'idle' | 'signing' | 'confirming' | 'success' | 'error';
+    message: string;
+  }>({ status: 'idle', message: '' });
+  const [isVoting, setIsVoting] = useState(false);
+  const [voteStatus, setVoteStatus] = useState<{
+    status: 'idle' | 'signing' | 'confirming' | 'success' | 'error';
+    message: string;
+  }>({ status: 'idle', message: '' });
   const provider = useAnchorProvider();
 
   const fetchPolls = async () => {
@@ -212,9 +421,15 @@ export function VotingFeature() {
         ...poll,
         candidates: candidatesByPollId[poll.account.pollId.toString('hex')] || []
       }));
+
+      const filteredPolls = pollsWithCandidates.filter(poll => {
+        return poll.candidates.length >= 2
+      })
+
+      console.log("Filtered polls", filteredPolls);
       
       // Sort polls by start time, most recent first
-      const sortedPolls = pollsWithCandidates.sort((a, b) => 
+      const sortedPolls = filteredPolls.sort((a, b) => 
         b.account.pollStart.toNumber() - a.account.pollStart.toNumber()
       );
 
@@ -235,11 +450,6 @@ export function VotingFeature() {
     }
   }, []);
 
-  const handleCreatePollSuccess = async () => {
-    setCreatePollOpen(false);
-    await fetchPolls(); // Refresh polls after creating a new one
-  };
-
   const handleCreatePoll = async (pollData: {
     name: string;
     description: string;
@@ -248,62 +458,77 @@ export function VotingFeature() {
     candidates: string[];
   }) => {
     try {
-      setError(null);
-      console.log('Creating poll:', pollData);
-      const program = getVotingProgram(provider)
-      if(publicKey == null){
+      if (pollData.candidates.length < 2) {
+        setError('At least 2 candidates are required to create a poll');
         return;
       }
 
-      const startTimestamp = new BN(new Date(pollData.pollStart).getTime() / 1000);
-      const endTimestamp = new BN(new Date(pollData.pollEnd).getTime() / 1000);
+      setIsCreatingPoll(true);
+      setCreatePollOpen(false);
+      
+      const program = getVotingProgram(provider);
+      if (!publicKey) throw new Error('Wallet not connected');
 
+      const pollId = new BN(Date.now());
+      const startTime = new BN(Math.floor(new Date(pollData.pollStart).getTime() / 1000));
+      const endTime = new BN(Math.floor(new Date(pollData.pollEnd).getTime() / 1000));
+
+      setTransactionStatus({
+        status: 'signing',
+        message: 'Please sign the transaction to create your poll...'
+      });
+
+      // Create poll account
       const [pollPda] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("poll"),
-          publicKey.toBuffer(),
-          startTimestamp.toArrayLike(Buffer, 'le', 8)
-        ],
+        [Buffer.from("poll"), publicKey.toBuffer(), startTime.toArrayLike(Buffer, 'le', 8)],
         program.programId
       );
 
-      // Create the poll
-      await program.methods
-        .initializePoll(
-          pollData.description,
-          startTimestamp,
-          endTimestamp,
-          pollData.name,
-        )
-        .accounts({
-          authority: publicKey,
-          poll: pollPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-      
-      console.log("Poll created with PDA:", pollPda.toString());
+      try {
+        const pollTx = await program.methods
+          .initializePoll(
+            pollData.description,
+            startTime,
+            endTime,
+            pollData.name
+          )
+          .accounts({
+            authority: publicKey,
+            poll: pollPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      } catch (err) {
+        throw new Error('Failed to create poll. Please try again.');
+      }
 
-      // Fetch the created poll account
+      setTransactionStatus({
+        status: 'confirming',
+        message: 'Creating poll...'
+      });
+
       let pollAccount = await program.account.poll.fetch(pollPda);
 
-      // Initialize candidates
-      for (const candidateName of pollData.candidates) {
+      // Create candidate accounts
+      for (let i = 0; i < pollData.candidates.length; i++) {
+        setTransactionStatus({
+          status: 'signing',
+          message: `Please sign transaction for candidate ${i + 1} of ${pollData.candidates.length}...`
+        });
+
         try {
-          console.log("Creating candidate with nextCandidateId:", pollAccount.nextCandidateId.toString());
-          
+          const candidateId = new BN(i + 1);
           const [candidatePda] = PublicKey.findProgramAddressSync(
             [
-              Buffer.from("candidate"),
+              Buffer.from('candidate'),
               pollPda.toBuffer(),
-              pollAccount.nextCandidateId.toArrayLike(Buffer, 'le', 8)
+              pollAccount.nextCandidateId.toArrayLike(Buffer, 'le', 8),
             ],
             program.programId
           );
-          console.log("Candidate PDA:", candidatePda.toString());
 
           await program.methods
-            .initializeCandidate(candidateName)
+            .initializeCandidate(pollData.candidates[i])
             .accounts({
               authority: publicKey,
               poll: pollPda,
@@ -311,50 +536,59 @@ export function VotingFeature() {
               systemProgram: SystemProgram.programId,
             })
             .rpc();
-          
-          console.log("Candidate created:", candidateName);
-          
-          // Fetch the updated poll account for the next iteration
+
           pollAccount = await program.account.poll.fetch(pollPda);
-          console.log("Updated next candidate id:", pollAccount.nextCandidateId.toString());
         } catch (err) {
-          console.error('Error creating candidate:', candidateName, err);
-          setError('Failed to create candidate: ' + (err as Error).message);
-          return; // Stop creating more candidates if one fails
+          throw new Error('Failed to add candidates. A minimum of 2 candidates is required.');
         }
       }
 
-      handleCreatePollSuccess();
+      setTransactionStatus({
+        status: 'success',
+        message: 'Poll created successfully!'
+      });
+
+      await fetchPolls();
+      
     } catch (err) {
       console.error('Error creating poll:', err);
-      setError('Failed to create poll: ' + (err as Error).message);
+      setTransactionStatus({
+        status: 'error',
+        message: (err as Error).message || 'Failed to create poll'
+      });
+      setError((err as Error).message || 'Failed to create poll');
+    } finally {
+      setTimeout(() => {
+        setIsCreatingPoll(false);
+        setTransactionStatus({ status: 'idle', message: '' });
+      }, 2000);
     }
   };
 
   const handleVote = async (pollId: BN, candidateId: BN) => {
-    if (!publicKey) {
-      setError('Please connect your wallet first');
-      return;
-    }
-
     try {
-      const program = getVotingProgram(provider);
-      
-      console.log("Voting with pollId:", pollId.toString(), "candidateId:", candidateId.toString());
+      setIsVoting(true);
+      setVoteStatus({
+        status: 'signing',
+        message: 'Please sign the transaction to cast your vote...'
+      });
 
-      // First get all polls to find the one we want to vote on
+      const program = getVotingProgram(provider);
+      if (!publicKey) throw new Error('Wallet not connected');
+
+      // Find the poll and candidate accounts
       const allPolls = await program.account.poll.all();
       const targetPoll = allPolls.find(p => p.account.pollId.eq(pollId));
       const allCandidates = await program.account.candidate.all();
       const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId) && c.account.pollId.eq(pollId));
 
-      
-      if (!targetPoll) {
-        throw new Error('Poll not found');
-      }
-
-      if(!targetCandidate){
-        throw new Error('Candidate not found');
+      if(!targetPoll || !targetCandidate) {
+        console.error("Poll or candidate not found" );
+        console.log("Target poll", targetPoll);
+        console.log("Target candidate", targetCandidate);
+        console.log("All polls", allPolls);
+        console.log("All candidates", allCandidates);
+        throw new Error('Poll or candidate not found');
       }
 
       // Get poll details
@@ -399,9 +633,18 @@ export function VotingFeature() {
       
     } catch (err) {
       console.error('Error voting:', err);
-      setError('Failed to vote: ' + (err as Error).message);
+      setVoteStatus({
+        status: 'error',
+        message: (err as Error).message
+      });
+      setError((err as Error).message);
+    } finally {
+      setTimeout(() => {
+        setIsVoting(false);
+        setVoteStatus({ status: 'idle', message: '' });
+      }, 2000);
     }
-  }
+  };
 
   return (
     <Box>
@@ -412,11 +655,13 @@ export function VotingFeature() {
             sx={{ 
               p: 6, 
               textAlign: 'center',
-              background: 'rgba(255,255,255,0.95)',
+              background: 'rgba(44, 46, 53, 0.95)',
               borderRadius: 4,
               backdropFilter: 'blur(10px)',
               maxWidth: 600,
-              margin: 'auto'
+              margin: 'auto',
+              border: '1px solid rgba(162, 136, 166, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
             }}
           >
             <motion.div
@@ -426,10 +671,10 @@ export function VotingFeature() {
             >
               <HowToVoteIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
             </motion.div>
-            <Typography variant="h4" gutterBottom fontWeight="bold">
+            <Typography variant="h4" gutterBottom fontWeight="bold" sx={{ color: '#F1E3E4' }}>
               Welcome to Decentralized Voting
             </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
+            <Typography variant="body1" sx={{ color: '#CCBCBC', mb: 4 }} paragraph>
               Connect your wallet to participate in secure and transparent voting
             </Typography>
             <WalletMultiButton />
@@ -442,6 +687,21 @@ export function VotingFeature() {
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setCreatePollOpen(true)}
+              sx={{
+                backgroundColor: '#A288A6',
+                color: '#F1E3E4',
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                fontSize: '1rem',
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(162, 136, 166, 0.2)',
+                '&:hover': {
+                  backgroundColor: '#BB9BB0',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 16px rgba(162, 136, 166, 0.3)',
+                }
+              }}
             >
               Create Poll
             </Button>
@@ -451,24 +711,28 @@ export function VotingFeature() {
               <Paper
                 elevation={3}
                 sx={{
-                  p: 2,
+                  p: 3,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
-                  background: 'rgba(255,255,255,0.95)',
+                  background: 'rgba(44, 46, 53, 0.95)',
                   borderRadius: 2,
-                  transition: 'transform 0.2s',
+                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(162, 136, 166, 0.3)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                   '&:hover': {
                     transform: 'translateY(-5px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                    background: 'rgba(44, 46, 53, 0.98)',
                   }
                 }}
               >
                 <HowToVoteIcon sx={{ fontSize: 40, color: 'primary.main' }} />
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: '#CCBCBC', mb: 1 }}>
                     Active Polls
                   </Typography>
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ color: '#F1E3E4', fontWeight: 'bold' }}>
                     {polls.length.toString()}
                   </Typography>
                 </Box>
@@ -478,24 +742,28 @@ export function VotingFeature() {
               <Paper
                 elevation={3}
                 sx={{
-                  p: 2,
+                  p: 3,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
-                  background: 'rgba(255,255,255,0.95)',
+                  background: 'rgba(44, 46, 53, 0.95)',
                   borderRadius: 2,
-                  transition: 'transform 0.2s',
+                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(162, 136, 166, 0.3)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                   '&:hover': {
                     transform: 'translateY(-5px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                    background: 'rgba(44, 46, 53, 0.98)',
                   }
                 }}
               >
                 <TimelineIcon sx={{ fontSize: 40, color: 'secondary.main' }} />
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: '#CCBCBC', mb: 1 }}>
                     Total Votes
                   </Typography>
-                  <Typography variant="h6">
+                  <Typography variant="h6" sx={{ color: '#F1E3E4', fontWeight: 'bold' }}>
                     {polls.reduce((acc, poll) => acc + poll.account.candidateAmount.toNumber(), 0).toString()}
                   </Typography>
                 </Box>
@@ -505,25 +773,29 @@ export function VotingFeature() {
               <Paper
                 elevation={3}
                 sx={{
-                  p: 2,
+                  p: 3,
                   display: 'flex',
                   alignItems: 'center',
                   gap: 2,
-                  background: 'rgba(255,255,255,0.95)',
+                  background: 'rgba(44, 46, 53, 0.95)',
                   borderRadius: 2,
-                  transition: 'transform 0.2s',
+                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(162, 136, 166, 0.3)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                   '&:hover': {
                     transform: 'translateY(-5px)',
+                    boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3)',
+                    background: 'rgba(44, 46, 53, 0.98)',
                   }
                 }}
               >
                 <PeopleIcon sx={{ fontSize: 40, color: 'success.main' }} />
                 <Box>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: '#CCBCBC', mb: 1 }}>
                     Participants
                   </Typography>
-                  <Typography variant="h6">
-                    1,234
+                  <Typography variant="h6" sx={{ color: '#F1E3E4', fontWeight: 'bold' }}>
+                    {polls.reduce((acc, poll) => acc + poll.account.candidateAmount.toNumber(), 0).toString()}
                   </Typography>
                 </Box>
               </Paper>
@@ -531,108 +803,190 @@ export function VotingFeature() {
           </Grid>
 
           <Grid container spacing={4}>
-            {polls.map((poll) => (
-              <Grid item xs={12} key={poll.publicKey.toString()}>
-                <Grow in timeout={1000}>
-                  <Card 
-                    elevation={5}
-                    sx={{ 
-                      background: 'rgba(255,255,255,0.95)',
-                      borderRadius: 4,
-                      overflow: 'hidden',
-                      transition: 'transform 0.3s',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography variant="h4" gutterBottom fontWeight="bold">
-                        {poll.account.name}
-                      </Typography>
-                      
-                      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
-                        <Chip 
-                          label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
-                          color="primary"
-                          sx={{ borderRadius: 2, px: 2 }}
-                        />
-                        <Chip 
-                          label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
-                          color="secondary"
-                          sx={{ borderRadius: 2, px: 2 }}
-                        />
-                        <Chip 
-                          label={`Total Votes: ${poll.account.candidateAmount.toString()}`}
-                          color="info"
-                          sx={{ borderRadius: 2, px: 2 }}
-                        />
-                      </Box>
-
-                      <Grid container spacing={3}>
-                        {poll.candidates?.map((candidate) => (
-                          <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
-                            <Paper 
-                              elevation={3}
+            {polls.length > 0 && (
+              polls
+                .filter(poll => poll.candidates?.length >= 2) // Only show polls with 2 or more candidates
+                .map((poll) => (
+                  <Grid item xs={12} key={poll.publicKey.toString()}>
+                    <Grow in timeout={1000}>
+                      <Card 
+                        elevation={5}
+                        sx={{ 
+                          background: 'rgba(44, 46, 53, 0.95)',
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
+                          border: '1px solid rgba(162, 136, 166, 0.3)',
+                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                          '&:hover': {
+                            transform: 'translateY(-5px)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+                          }
+                        }}
+                      >
+                        <CardContent sx={{ p: 4 }}>
+                          <Typography 
+                            variant="h4" 
+                            gutterBottom 
+                            sx={{ 
+                              color: '#F1E3E4',
+                              fontWeight: 'bold',
+                              mb: 3,
+                              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                            }}
+                          >
+                            {poll.account.name}
+                          </Typography>
+                          
+                          <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Chip 
+                              label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
                               sx={{ 
-                                p: 3,
-                                height: '100%',
-                                background: 'rgba(255,255,255,0.9)',
-                                borderRadius: 3,
-                                transition: 'all 0.3s',
-                                '&:hover': {
-                                  transform: 'scale(1.02)',
-                                  boxShadow: 6,
-                                }
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
                               }}
-                            >
-                              <Typography variant="h5" gutterBottom fontWeight="bold">
-                                {candidate.candidateName}
-                              </Typography>
-                              <Typography variant="body1" color="text.secondary" paragraph>
-                                {candidate.candidateDescription}
-                              </Typography>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
-                                <Typography variant="h6" color="primary">
-                                  {candidate.candidateVotes.toString()} votes
-                                </Typography>
-                                <Button 
-                                  variant="contained" 
-                                  color="primary"
-                                  size="large"
-                                  onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
-                                  disabled={
-                                    !publicKey || // Not connected
-                                    Date.now() < poll.account.pollStart.toNumber() * 1000 || // Poll hasn't started
-                                    Date.now() > poll.account.pollEnd.toNumber() * 1000 // Poll has ended
-                                  }
+                            />
+                            <Chip 
+                              label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
+                              sx={{ 
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
+                              }}
+                            />
+                            <Chip 
+                              label={`Total Votes: ${poll.account.candidateAmount.toString()}`}
+                              sx={{ 
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
+                              }}
+                            />
+                          </Box>
+
+                          <Grid container spacing={3}>
+                            {poll.candidates?.map((candidate) => (
+                              <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
+                                <Paper 
+                                  elevation={3}
                                   sx={{ 
-                                    borderRadius: 2,
-                                    px: 4,
-                                    py: 1,
-                                    textTransform: 'none',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    boxShadow: 3,
+                                    p: 3,
+                                    height: '100%',
+                                    background: 'rgba(28, 29, 33, 0.95)',
+                                    borderRadius: 3,
+                                    transition: 'all 0.3s ease',
+                                    border: '1px solid rgba(162, 136, 166, 0.3)',
+                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                                     '&:hover': {
-                                      transform: 'translateY(-2px)',
-                                      boxShadow: 5,
+                                      transform: 'scale(1.02)',
+                                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
                                     }
                                   }}
                                 >
-                                  Vote
-                                </Button>
-                              </Box>
-                            </Paper>
+                                  <Typography 
+                                    variant="h5" 
+                                    gutterBottom 
+                                    sx={{ 
+                                      color: '#F1E3E4',
+                                      fontWeight: 'bold',
+                                      mb: 2,
+                                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                    }}
+                                  >
+                                    {candidate.candidateName}
+                                  </Typography>
+                                  <Typography 
+                                    variant="body1" 
+                                    sx={{ 
+                                      color: '#CCBCBC',
+                                      mb: 3,
+                                      lineHeight: 1.6
+                                    }}
+                                  >
+                                    {candidate.candidateDescription}
+                                  </Typography>
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    mt: 'auto'
+                                  }}>
+                                    <Typography 
+                                      variant="h6" 
+                                      sx={{ 
+                                        color: '#A288A6',
+                                        fontWeight: 600,
+                                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                      }}
+                                    >
+                                      {candidate.candidateVotes.toString()} votes
+                                    </Typography>
+                                    <Button 
+                                      variant="contained" 
+                                      size="large"
+                                      onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
+                                      disabled={
+                                        !publicKey || 
+                                        Date.now() < poll.account.pollStart.toNumber() * 1000 || 
+                                        Date.now() > poll.account.pollEnd.toNumber() * 1000
+                                      }
+                                      sx={{ 
+                                        borderRadius: 2,
+                                        px: 4,
+                                        py: 1.5,
+                                        textTransform: 'none',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: '#A288A6',
+                                        color: '#1C1D21',
+                                        boxShadow: '0 4px 15px rgba(162, 136, 166, 0.3)',
+                                        '&:hover': {
+                                          backgroundColor: '#BB9BB0',
+                                          transform: 'translateY(-2px)',
+                                          boxShadow: '0 6px 20px rgba(162, 136, 166, 0.4)',
+                                        },
+                                        '&:disabled': {
+                                          backgroundColor: 'rgba(204, 188, 188, 0.2)',
+                                          color: '#CCBCBC',
+                                        }
+                                      }}
+                                    >
+                                      Vote
+                                    </Button>
+                                  </Box>
+                                </Paper>
+                              </Grid>
+                            ))}
                           </Grid>
-                        ))}
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grow>
-              </Grid>
-            ))}
+                        </CardContent>
+                      </Card>
+                    </Grow>
+                  </Grid>
+                ))
+            )}
           </Grid>
+
+          {(!polls.length || !polls.some(poll => poll.candidates?.length >= 2)) && (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 8,
+              color: '#CCBCBC'
+            }}>
+              <Typography variant="h6">
+                No active polls found.
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
       
@@ -650,9 +1004,119 @@ export function VotingFeature() {
         </Alert>
       )}
 
+      {/* Vote Status Overlay */}
+      {isVoting && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <Box
+            sx={{
+              background: 'rgba(44, 46, 53, 0.95)',
+              p: 4,
+              borderRadius: 2,
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+              border: '1px solid rgba(162, 136, 166, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <CircularProgress 
+              sx={{ 
+                color: voteStatus.status === 'error' ? '#ff6b6b' : '#A288A6',
+                mb: 3 
+              }} 
+            />
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#F1E3E4',
+                mb: 1,
+                fontWeight: 'bold'
+              }}
+            >
+              {voteStatus.status === 'signing' ? 'Waiting for Signature' :
+               voteStatus.status === 'confirming' ? 'Confirming Vote' :
+               voteStatus.status === 'success' ? 'Success!' :
+               voteStatus.status === 'error' ? 'Error' : 'Processing...'}
+            </Typography>
+            <Typography sx={{ color: '#CCBCBC' }}>
+              {voteStatus.message}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
+      {/* Transaction Status Overlay (for creating poll) */}
+      {isCreatingPoll && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <Box
+            sx={{
+              background: 'rgba(44, 46, 53, 0.95)',
+              p: 4,
+              borderRadius: 2,
+              maxWidth: '400px',
+              width: '90%',
+              textAlign: 'center',
+              border: '1px solid rgba(162, 136, 166, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <CircularProgress 
+              sx={{ 
+                color: transactionStatus.status === 'error' ? '#ff6b6b' : '#A288A6',
+                mb: 3 
+              }} 
+            />
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: '#F1E3E4',
+                mb: 1,
+                fontWeight: 'bold'
+              }}
+            >
+              {transactionStatus.status === 'signing' ? 'Waiting for Signature' :
+               transactionStatus.status === 'confirming' ? 'Confirming Transaction' :
+               transactionStatus.status === 'success' ? 'Success!' :
+               transactionStatus.status === 'error' ? 'Error' : 'Processing...'}
+            </Typography>
+            <Typography sx={{ color: '#CCBCBC' }}>
+              {transactionStatus.message}
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
       <CreatePoll
         open={createPollOpen}
-        onClose={() => setCreatePollOpen(false)}
+        onClose={() => !isCreatingPoll && setCreatePollOpen(false)}
         onSubmit={handleCreatePoll}
       />
 

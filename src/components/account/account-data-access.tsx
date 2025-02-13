@@ -14,6 +14,7 @@ import {
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {useTransactionToast} from '../ui/ui-layout'
+import { useEffect } from 'react'
 
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
