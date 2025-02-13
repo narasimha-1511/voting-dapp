@@ -572,6 +572,9 @@ export function VotingFeature() {
         message: 'Please sign the transaction to cast your vote...'
       });
 
+      console.log("POll", pollId);
+      console.log("Candidate", candidateId);
+
       const program = getVotingProgram(provider);
       if (!publicKey) throw new Error('Wallet not connected');
 
@@ -582,6 +585,11 @@ export function VotingFeature() {
       const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId));
 
       if(!targetPoll || !targetCandidate) {
+        console.error("Poll or candidate not found" );
+        console.log("Target poll", targetPoll);
+        console.log("Target candidate", targetCandidate);
+        console.log("All polls", allPolls);
+        console.log("All candidates", allCandidates);
         throw new Error('Poll or candidate not found');
       }
 
@@ -936,7 +944,7 @@ export function VotingFeature() {
                                     <Button 
                                       variant="contained" 
                                       size="large"
-                                      onClick={() => handleVote(poll.account.pollId, candidate.candidateId.toNumber())}
+                                      onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
                                       disabled={
                                         !publicKey || 
                                         Date.now() < poll.account.pollStart.toNumber() * 1000 || 
