@@ -1,4 +1,13 @@
-# voting
+# Voting dapp
+
+[![Video Demo](https://github.com/narasimha-1511/voting-dapp/blob/main/assets/demo.mp4)](https://github.com/narasimha-1511/voting-dapp/blob/main/assets/demo.mp4)
+
+
+### Key Features
+- Create and manage voting accounts on Solana
+- Real-time vote tracking
+- Secure wallet integration
+- Multi-cluster support (Mainnet, Devnet, Testnet)
 
 ## Getting Started
 
@@ -15,8 +24,8 @@
 #### Clone the repo
 
 ```shell
-git clone <repo-url>
-cd <repo-name>
+git clone https://github.com/narasimha-1511/voting-dapp.git
+cd voting-dapp
 ```
 
 #### Install Dependencies
