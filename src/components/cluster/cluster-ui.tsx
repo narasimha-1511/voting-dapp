@@ -27,9 +27,10 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
   const { connection } = useConnection()
 
   const query = useQuery({
-    queryKey: ['version', { cluster, endpoint: connection.rpcEndpoint }],
-    queryFn: () => connection.getVersion(),
+    queryKey: ['version', { cluster, endpoint: connection?.rpcEndpoint }],
+    queryFn: () => connection?.getVersion() ?? null,
     retry: 1,
+    enabled: !!connection
   })
   if (query.isLoading) {
     return null
@@ -51,6 +52,7 @@ export function ClusterChecker({ children }: { children: ReactNode }) {
 
 export function ClusterUiSelect() {
   const { clusters, setCluster, cluster } = useCluster()
+  
   return (
     <div className="dropdown dropdown-end">
       <label tabIndex={0} className="btn btn-primary rounded-btn">
@@ -61,7 +63,11 @@ export function ClusterUiSelect() {
           <li key={item.name}>
             <button
               className={`btn btn-sm ${item.active ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setCluster(item)}
+              onClick={() => {
+                setCluster(item)
+                // Force a page reload to ensure all components update with new connection
+                window.location.reload()
+              }}
             >
               {item.name}
             </button>

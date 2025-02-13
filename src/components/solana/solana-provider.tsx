@@ -13,6 +13,7 @@ import {
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { ReactNode, useCallback, useMemo } from 'react'
 import { getRpcEndpoint } from '@/config/rpc'
+import { Connection } from '@solana/web3.js'
 
 require('@solana/wallet-adapter-react-ui/styles.css')
 

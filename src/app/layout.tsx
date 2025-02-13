@@ -7,6 +7,7 @@ import {ReactQueryProvider} from './react-query-provider'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import { theme } from '@/theme/theme'
+import { Box } from '@mui/material'
 
 
 const links: { label: string; path: string }[] = [
@@ -18,18 +19,24 @@ const links: { label: string; path: string }[] = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body style={{ margin: 0, padding: 0, overflow: 'hidden' }}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <ReactQueryProvider>
-        <ClusterProvider>
-          <SolanaProvider>
-            <UiLayout links={links}>{children}</UiLayout>
-          </SolanaProvider>
-        </ClusterProvider>
-      </ReactQueryProvider>
-    </ThemeProvider>
-    </body>
+          <Box sx={{ 
+            height: '100vh',
+            overflow: 'auto',
+            position: 'relative'
+          }}>
+            <ReactQueryProvider>
+              <ClusterProvider>
+                <SolanaProvider>
+                  <UiLayout links={links}>{children}</UiLayout>
+                </SolanaProvider>
+              </ClusterProvider>
+            </ReactQueryProvider>
+          </Box>
+        </ThemeProvider>
+      </body>
     </html>
   )
 }
