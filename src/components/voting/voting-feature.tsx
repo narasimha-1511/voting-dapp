@@ -373,6 +373,36 @@ const textFieldStyle = {
   }
 };
 
+// Add this helper function at the top level
+const getPollStatus = (startTime: number, endTime: number) => {
+  const now = Date.now();
+  const start = startTime * 1000;
+  const end = endTime * 1000;
+
+  if (now < start) {
+    const timeLeft = Math.floor((start - now) / 1000);
+    const days = Math.floor(timeLeft / 86400);
+    const hours = Math.floor((timeLeft % 86400) / 3600);
+    const minutes = Math.floor((timeLeft % 3600) / 60);
+    return {
+      status: 'upcoming',
+      message: `Starts in ${days}d ${hours}h ${minutes}m`,
+      color: '#ffd43b'
+    };
+  } else if (now > end) {
+    return {
+      status: 'ended',
+      message: 'Poll has ended',
+      color: '#ff6b6b'
+    };
+  }
+  return {
+    status: 'active',
+    message: 'Poll is active',
+    color: '#69db7c'
+  };
+};
+
 export function VotingFeature() {
   const { connected, publicKey } = useWallet()
   const [polls, setPolls] = useState<any[]>([])
@@ -810,174 +840,189 @@ export function VotingFeature() {
           <Grid container spacing={4}>
             {polls.length > 0 && (
               polls
-                .filter(poll => poll.candidates?.length >= 2) // Only show polls with 2 or more candidates
-                .map((poll) => (
-                  <Grid item xs={12} key={poll.publicKey.toString()}>
-                    <Grow in timeout={1000}>
-                      <Card 
-                        elevation={5}
-                        sx={{ 
-                          background: 'rgba(44, 46, 53, 0.95)',
-                          borderRadius: 4,
-                          overflow: 'hidden',
-                          transition: 'all 0.3s ease',
-                          border: '1px solid rgba(162, 136, 166, 0.3)',
-                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                          '&:hover': {
-                            transform: 'translateY(-5px)',
-                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
-                          }
-                        }}
-                      >
-                        <CardContent sx={{ p: 4 }}>
-                          <Typography 
-                            variant="h4" 
-                            gutterBottom 
-                            sx={{ 
-                              color: '#F1E3E4',
-                              fontWeight: 'bold',
-                              mb: 3,
-                              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                            }}
-                          >
-                            {poll.account.name}
-                          </Typography>
-                          
-                          <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                            <Chip 
-                              label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
-                              sx={{ 
-                                borderRadius: 2, 
-                                px: 2,
-                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                                color: '#F1E3E4',
-                                fontWeight: 500,
-                                border: '1px solid rgba(162, 136, 166, 0.4)',
-                              }}
-                            />
-                            <Chip 
-                              label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
-                              sx={{ 
-                                borderRadius: 2, 
-                                px: 2,
-                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                                color: '#F1E3E4',
-                                fontWeight: 500,
-                                border: '1px solid rgba(162, 136, 166, 0.4)',
-                              }}
-                            />
-                            <Chip 
-                              label={`Total Votes: ${poll?.candidates?.reduce((acc, candidate) => acc + candidate?.candidateVotes?.toNumber() || 0, 0).toString()}`}
-                              sx={{ 
-                                borderRadius: 2, 
-                                px: 2,
-                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                                color: '#F1E3E4',
-                                fontWeight: 500,
-                                border: '1px solid rgba(162, 136, 166, 0.4)',
-                              }}
-                            />
-                          </Box>
+                .filter(poll => poll.candidates?.length >= 2)
+                .map((poll) => {
+                  const pollStatus = getPollStatus(
+                    poll.account.pollStart.toNumber(),
+                    poll.account.pollEnd.toNumber()
+                  );
 
-                          <Grid container spacing={3}>
-                            {poll.candidates?.map((candidate) => (
-                              <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
-                                <Paper 
-                                  elevation={3}
-                                  sx={{ 
-                                    p: 3,
-                                    height: '100%',
-                                    background: 'rgba(28, 29, 33, 0.95)',
-                                    borderRadius: 3,
-                                    transition: 'all 0.3s ease',
-                                    border: '1px solid rgba(162, 136, 166, 0.3)',
-                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                                    '&:hover': {
-                                      transform: 'scale(1.02)',
-                                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
-                                    }
-                                  }}
-                                >
-                                  <Typography 
-                                    variant="h5" 
-                                    gutterBottom 
+                  return (
+                    <Grid item xs={12} key={poll.publicKey.toString()}>
+                      <Grow in timeout={1000}>
+                        <Card 
+                          elevation={5}
+                          sx={{ 
+                            background: 'rgba(44, 46, 53, 0.95)',
+                            borderRadius: 4,
+                            overflow: 'hidden',
+                            transition: 'all 0.3s ease',
+                            border: '1px solid rgba(162, 136, 166, 0.3)',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                            '&:hover': {
+                              transform: 'translateY(-5px)',
+                              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+                            }
+                          }}
+                        >
+                          <CardContent sx={{ p: 4 }}>
+                            <Typography 
+                              variant="h4" 
+                              gutterBottom 
+                              sx={{ 
+                                color: '#F1E3E4',
+                                fontWeight: 'bold',
+                                mb: 3,
+                                textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                              }}
+                            >
+                              {poll.account.name}
+                            </Typography>
+                            
+                            <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                              <Chip 
+                                label={pollStatus.message}
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  px: 2,
+                                  backgroundColor: `${pollStatus.color}20`,
+                                  color: pollStatus.color,
+                                  fontWeight: 600,
+                                  border: `1px solid ${pollStatus.color}40`,
+                                }}
+                              />
+                              <Chip 
+                                label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  px: 2,
+                                  backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                  color: '#F1E3E4',
+                                  fontWeight: 500,
+                                  border: '1px solid rgba(162, 136, 166, 0.4)',
+                                }}
+                              />
+                              <Chip 
+                                label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  px: 2,
+                                  backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                  color: '#F1E3E4',
+                                  fontWeight: 500,
+                                  border: '1px solid rgba(162, 136, 166, 0.4)',
+                                }}
+                              />
+                              <Chip 
+                                label={`Total Votes: ${poll?.candidates?.reduce((acc, candidate) => acc + candidate?.candidateVotes?.toNumber() || 0, 0).toString()}`}
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  px: 2,
+                                  backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                  color: '#F1E3E4',
+                                  fontWeight: 500,
+                                  border: '1px solid rgba(162, 136, 166, 0.4)',
+                                }}
+                              />
+                            </Box>
+
+                            <Grid container spacing={3}>
+                              {poll.candidates?.map((candidate) => (
+                                <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
+                                  <Paper 
+                                    elevation={3}
                                     sx={{ 
-                                      color: '#F1E3E4',
-                                      fontWeight: 'bold',
-                                      mb: 2,
-                                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                      p: 3,
+                                      height: '100%',
+                                      background: 'rgba(28, 29, 33, 0.95)',
+                                      borderRadius: 3,
+                                      transition: 'all 0.3s ease',
+                                      border: '1px solid rgba(162, 136, 166, 0.3)',
+                                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                                      '&:hover': {
+                                        transform: 'scale(1.02)',
+                                        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
+                                      }
                                     }}
                                   >
-                                    {candidate.candidateName}
-                                  </Typography>
-                                  <Typography 
-                                    variant="body1" 
-                                    sx={{ 
-                                      color: '#CCBCBC',
-                                      mb: 3,
-                                      lineHeight: 1.6
-                                    }}
-                                  >
-                                    {candidate.candidateDescription}
-                                  </Typography>
-                                  <Box sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'space-between',
-                                    mt: 'auto'
-                                  }}>
                                     <Typography 
-                                      variant="h6" 
+                                      variant="h5" 
+                                      gutterBottom 
                                       sx={{ 
-                                        color: '#A288A6',
-                                        fontWeight: 600,
+                                        color: '#F1E3E4',
+                                        fontWeight: 'bold',
+                                        mb: 2,
                                         textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                                       }}
                                     >
-                                      {candidate.candidateVotes.toString()} votes
+                                      {candidate.candidateName}
                                     </Typography>
-                                    <Button 
-                                      variant="contained" 
-                                      size="large"
-                                      onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
-                                      disabled={
-                                        !publicKey || 
-                                        Date.now() < poll.account.pollStart.toNumber() * 1000 || 
-                                        Date.now() > poll.account.pollEnd.toNumber() * 1000
-                                      }
+                                    <Typography 
+                                      variant="body1" 
                                       sx={{ 
-                                        borderRadius: 2,
-                                        px: 4,
-                                        py: 1.5,
-                                        textTransform: 'none',
-                                        fontSize: '1.1rem',
-                                        fontWeight: 'bold',
-                                        backgroundColor: '#A288A6',
-                                        color: '#1C1D21',
-                                        boxShadow: '0 4px 15px rgba(162, 136, 166, 0.3)',
-                                        '&:hover': {
-                                          backgroundColor: '#BB9BB0',
-                                          transform: 'translateY(-2px)',
-                                          boxShadow: '0 6px 20px rgba(162, 136, 166, 0.4)',
-                                        },
-                                        '&:disabled': {
-                                          backgroundColor: 'rgba(204, 188, 188, 0.2)',
-                                          color: '#CCBCBC',
-                                        }
+                                        color: '#CCBCBC',
+                                        mb: 3,
+                                        lineHeight: 1.6
                                       }}
                                     >
-                                      Vote
-                                    </Button>
-                                  </Box>
-                                </Paper>
-                              </Grid>
-                            ))}
-                          </Grid>
-                        </CardContent>
-                      </Card>
-                    </Grow>
-                  </Grid>
-                ))
+                                      {candidate.candidateDescription}
+                                    </Typography>
+                                    <Box sx={{ 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'space-between',
+                                      mt: 'auto'
+                                    }}>
+                                      <Typography 
+                                        variant="h6" 
+                                        sx={{ 
+                                          color: '#A288A6',
+                                          fontWeight: 600,
+                                          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                        }}
+                                      >
+                                        {candidate.candidateVotes.toString()} votes
+                                      </Typography>
+                                      <Button 
+                                        variant="contained" 
+                                        size="large"
+                                        onClick={() => handleVote(poll.account.pollId, candidate.candidateId)}
+                                        disabled={pollStatus.status !== 'active' || !publicKey}
+                                        title={pollStatus.status !== 'active' ? pollStatus.message : 'Cast your vote'}
+                                        sx={{ 
+                                          borderRadius: 2,
+                                          px: 4,
+                                          py: 1.5,
+                                          textTransform: 'none',
+                                          fontSize: '1.1rem',
+                                          fontWeight: 'bold',
+                                          backgroundColor: '#A288A6',
+                                          color: '#1C1D21',
+                                          boxShadow: '0 4px 15px rgba(162, 136, 166, 0.3)',
+                                          '&:hover': {
+                                            backgroundColor: '#BB9BB0',
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: '0 6px 20px rgba(162, 136, 166, 0.4)',
+                                          },
+                                          '&:disabled': {
+                                            backgroundColor: 'rgba(204, 188, 188, 0.2)',
+                                            color: '#CCBCBC',
+                                          }
+                                        }}
+                                      >
+                                        {pollStatus.status === 'active' ? 'Vote' : pollStatus.message}
+                                      </Button>
+                                    </Box>
+                                  </Paper>
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      </Grow>
+                    </Grid>
+                  )
+                })
             )}
           </Grid>
 
