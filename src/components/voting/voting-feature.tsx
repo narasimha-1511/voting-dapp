@@ -422,7 +422,7 @@ export function VotingFeature() {
       }));
 
       const filteredPolls = pollsWithCandidates.filter(poll => {
-        return poll.candidates.length > 0
+        return poll.candidates.length >= 2
       })
 
       console.log("Filtered polls", filteredPolls);
@@ -572,13 +572,10 @@ export function VotingFeature() {
         message: 'Please sign the transaction to cast your vote...'
       });
 
-      console.log("POll", pollId);
-      console.log("Candidate", candidateId);
-
       const program = getVotingProgram(provider);
       if (!publicKey) throw new Error('Wallet not connected');
 
-
+      // Find the poll and candidate accounts
       const allPolls = await program.account.poll.all();
       const targetPoll = allPolls.find(p => p.account.pollId.eq(pollId));
       const allCandidates = await program.account.candidate.all();
@@ -624,30 +621,37 @@ export function VotingFeature() {
         message: 'Confirming your vote...'
       });
 
-      await program.methods
-        .vote()
-        .accounts({
-          signer: publicKey,
+        const voteTx = await program.methods
+          .vote()
+          .accounts({
+            signer: publicKey,
           poll: pollAuthority,
           candidate: candidatePda,
-        })
-        .rpc();
+          })
+          .rpc();
 
-      setVoteStatus({
-        status: 'success',
-        message: 'Vote cast successfully!'
-      });
+        console.log("Vote transaction", voteTx);
 
-      // Refresh polls to update vote count
-      await fetchPolls();
+        if(!voteTx) {
+          throw new Error('Failed to cast vote. You may have already voted in this poll.');
+        }
+
+        setVoteStatus({
+          status: 'success',
+          message: 'Vote cast successfully!'
+        });
+
+        // Wait a bit before refreshing to allow the network to update
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchPolls();
 
     } catch (err) {
       console.error('Error voting:', err);
       setVoteStatus({
         status: 'error',
-        message: 'Failed to cast vote: ' + (err as Error).message
+        message: (err as Error).message
       });
-      setError('Failed to cast vote: ' + (err as Error).message);
+      setError((err as Error).message);
     } finally {
       setTimeout(() => {
         setIsVoting(false);
