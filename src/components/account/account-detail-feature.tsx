@@ -85,14 +85,7 @@ export default function AccountDetailFeature() {
                   <ExplorerLink 
                     path={`account/${address}`} 
                     label={ellipsify(address.toString())}
-                    sx={{
-                      color: '#A288A6',
-                      textDecoration: 'none',
-                      '&:hover': {
-                        color: '#BB9BB0',
-                        textDecoration: 'underline',
-                      }
-                    }}
+                    className=" text-A288A6 no-underline hover:text-BB9BB0 hover:underline"
                   />
                   <AccountButtons address={address} />
                 </Box>
