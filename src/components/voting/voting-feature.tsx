@@ -867,7 +867,7 @@ export function VotingFeature() {
                               }}
                             />
                             <Chip 
-                              label={`Total Votes: ${poll.account.candidateAmount.toString()}`}
+                              label={`Total Votes: ${poll?.candidates?.reduce((acc, candidate) => acc + candidate?.candidateVotes?.toNumber() || 0, 0).toString()}`}
                               sx={{ 
                                 borderRadius: 2, 
                                 px: 2,
