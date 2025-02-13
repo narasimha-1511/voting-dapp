@@ -198,7 +198,7 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
                   },
                   '&:hover fieldset': {
                     borderColor: 'rgba(162, 136, 166, 0.5)',
-                  },
+                  }
                 },
                 '& .MuiInputLabel-root': {
                   color: '#CCBCBC',
@@ -226,7 +226,7 @@ function CreatePoll({ open, onClose, onSubmit }: CreatePollProps) {
                   },
                   '&:hover fieldset': {
                     borderColor: 'rgba(162, 136, 166, 0.5)',
-                  },
+                  }
                 },
                 '& .MuiInputLabel-root': {
                   color: '#CCBCBC',
@@ -580,7 +580,7 @@ export function VotingFeature() {
       const allPolls = await program.account.poll.all();
       const targetPoll = allPolls.find(p => p.account.pollId.eq(pollId));
       const allCandidates = await program.account.candidate.all();
-      const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId) && c.account.pollId.eq(pollId));
+      const targetCandidate = allCandidates.find(c => c.account.pollId.eq(pollId) && c.account.candidateId.eq(candidateId));
 
       if(!targetPoll || !targetCandidate) {
         console.error("Poll or candidate not found" );
@@ -593,12 +593,6 @@ export function VotingFeature() {
 
       // Get poll details
       const pollAuthority = targetPoll.publicKey;
-
-      let pollAccount = await program.account.poll.fetch(pollAuthority);
-
-      console.log("Poll Fteched", pollAccount);
-
-      // Find the candidate PDA using poll PDA and candidate ID
       const candidatePda = targetCandidate.publicKey;
 
       console.log("PDAs - poll:", pollAuthority.toString(), "candidate:", candidatePda.toString());
@@ -610,7 +604,7 @@ export function VotingFeature() {
           publicKey.toBuffer(),
         ],
         program.programId
-      )
+      );
 
       // Submit vote transaction
       await program.methods
@@ -633,11 +627,22 @@ export function VotingFeature() {
       
     } catch (err) {
       console.error('Error voting:', err);
-      setVoteStatus({
-        status: 'error',
-        message: (err as Error).message
-      });
-      setError((err as Error).message);
+      
+      // Check if the error is due to account already in use (duplicate vote)
+      const errorMessage = (err as any)?.toString() || '';
+      if (errorMessage.includes('already in use')) {
+        setVoteStatus({
+          status: 'error',
+          message: 'You have already voted in this poll'
+        });
+        setError('You have already voted in this poll');
+      } else {
+        setVoteStatus({
+          status: 'error',
+          message: (err as Error).message
+        });
+        setError((err as Error).message);
+      }
     } finally {
       setTimeout(() => {
         setIsVoting(false);
