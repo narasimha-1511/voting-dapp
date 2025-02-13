@@ -23,6 +23,8 @@ pub mod voting {
         PollEnded,
         #[msg("Candidate can't be added once poll has started")]
         InvalidCandidate,
+        #[msg("You have already voted in this poll")]
+        AlreadyVoted,
     }
 
     pub fn initialize_poll(
@@ -89,10 +91,11 @@ pub mod voting {
       Ok(())
     }
 
-    pub fn vote(ctx: Context<Vote>, _poll_id: u64, _candidate_id: u64)-> Result<()>
+    pub fn vote(ctx: Context<Vote>)-> Result<()>
     {
       let poll = &ctx.accounts.poll;
       let candidate = &mut ctx.accounts.candidate;
+      let voter_record = &mut ctx.accounts.voter_record;
       let clock = Clock::get()?;
       let current_time = clock.unix_timestamp as u64;
 
@@ -100,6 +103,13 @@ pub mod voting {
       require!(current_time >= poll.poll_start, PollError::PollNotStarted);
       require!(current_time <= poll.poll_end, PollError::PollEnded);
 
+      // Check if voter has already voted
+      require!(voter_record.poll_id == 0, PollError::AlreadyVoted);
+
+      // Record the vote
+      voter_record.poll_id = poll.poll_id;
+      voter_record.voter = ctx.accounts.voter.key();
+        
       candidate.candidate_votes += 1;
       Ok(())
     }
@@ -107,23 +117,31 @@ pub mod voting {
 }
 
 #[derive(Accounts)]
-#[instruction(poll_id: u64 , candidate_id: u64)]
 pub struct Vote<'info> {
 
-  pub signer: Signer<'info>,
+  #[account(mut)]
+  pub voter: Signer<'info>,
 
-  #[account(
-    seeds = [poll_id.to_le_bytes().as_ref()],
-    bump,
-  )]
+  #[account(mut)]
   pub poll: Account<'info, Poll>,
 
+  #[account(mut)]
+  pub candidate: Account<'info, Candidate>,
+
   #[account(
-    mut,
-    seeds = [poll_id.to_le_bytes().as_ref(), candidate_id.to_le_bytes().as_ref()],
-    bump,
+    init,
+    payer = voter,
+    space = 8 + VoterRecord::INIT_SPACE,
+    seeds = [
+        b"voter_record",
+        poll.poll_id.to_le_bytes().as_ref(),
+        voter.key().as_ref(),
+    ],
+    bump
   )]
-  pub candidate: Account<'info, Candidate>
+  pub voter_record: Account<'info, VoterRecord>,
+
+  pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -195,4 +213,11 @@ pub struct Candidate {
   #[max_len(32)]
   pub candidate_name: String,
   pub candidate_votes: u64,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct VoterRecord {
+    pub poll_id: u64,
+    pub voter: Pubkey,
 }

@@ -153,7 +153,8 @@
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "voter",
+          "writable": true,
           "signer": true
         },
         {
@@ -163,6 +164,44 @@
         {
           "name": "candidate",
           "writable": true
+        },
+        {
+          "name": "voter_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "poll.poll_id",
+                "account": "Poll"
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -193,6 +232,19 @@
         136,
         153,
         111
+      ]
+    },
+    {
+      "name": "VoterRecord",
+      "discriminator": [
+        178,
+        96,
+        138,
+        116,
+        143,
+        202,
+        115,
+        33
       ]
     }
   ],
@@ -226,6 +278,11 @@
       "code": 6005,
       "name": "InvalidCandidate",
       "msg": "Candidate can't be added once poll has started"
+    },
+    {
+      "code": 6006,
+      "name": "AlreadyVoted",
+      "msg": "You have already voted in this poll"
     }
   ],
   "types": [
@@ -285,6 +342,22 @@
           {
             "name": "next_candidate_id",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VoterRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "poll_id",
+            "type": "u64"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
           }
         ]
       }

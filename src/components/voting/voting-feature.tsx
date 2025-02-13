@@ -346,53 +346,53 @@ export function VotingFeature() {
       const allPolls = await program.account.poll.all();
       const targetPoll = allPolls.find(p => p.account.pollId.eq(pollId));
       const allCandidates = await program.account.candidate.all();
-      const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId));
+      const targetCandidate = allCandidates.find(c => c.account.candidateId.eq(candidateId) && c.account.pollId.eq(pollId));
 
       
       if (!targetPoll) {
         throw new Error('Poll not found');
       }
 
-      // Get poll details
-      const pollStartTime = targetPoll.account.pollStart;
-      const pollAuthority = targetPoll.publicKey;
-      
-      console.log("Poll details - start time:", pollStartTime.toString(), "authority:", pollAuthority.toString());
-      
-      // // Find the poll PDA using authority and start time
-      // const [pollPda] = PublicKey.findProgramAddressSync(
-      //   [
-      //     Buffer.from("poll"),
-      //     pollAuthority.toBuffer(),
-      //     pollStartTime.toArrayLike(Buffer, 'le', 8)
-      //   ],
-      //   program.programId
-      // );
+      if(!targetCandidate){
+        throw new Error('Candidate not found');
+      }
 
-      // console.log("Poll PDA:", pollPda.toString());
+      // Get poll details
+      const pollAuthority = targetPoll.publicKey;
 
       let pollAccount = await program.account.poll.fetch(pollAuthority);
 
       console.log("Poll Fteched", pollAccount);
 
       // Find the candidate PDA using poll PDA and candidate ID
-      const candidatePda = targetCandidate?.publicKey;
-
-      let candidateAccount = await program.account.candidate.fetch(candidatePda);
-
-      console.log("Candidate Fetched", candidateAccount);
+      const candidatePda = targetCandidate.publicKey;
 
       console.log("PDAs - poll:", pollAuthority.toString(), "candidate:", candidatePda.toString());
+
+      const [voterRecordPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("voter_record"),
+          pollId.toArrayLike(Buffer, 'le', 8),
+          publicKey.toBuffer(),
+        ],
+        program.programId
+      )
 
       // Submit vote transaction
       await program.methods
         .vote()
         .accounts({
-          signer: publicKey,
+          voter: publicKey,
           poll: pollAuthority,
           candidate: candidatePda,
+          voterRecord: voterRecordPda,
+          systemProgram: SystemProgram.programId,
         })
         .rpc();
+
+        let candidateAccount = await program.account.candidate.fetch(candidatePda);
+
+        console.log("Candidate votes for :"+candidateAccount.candidateName+" "+ candidateAccount.candidateVotes);
 
       // Refresh the polls to show updated vote count
       await fetchPolls();

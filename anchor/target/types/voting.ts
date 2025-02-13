@@ -159,7 +159,8 @@ export type Voting = {
       ],
       "accounts": [
         {
-          "name": "signer",
+          "name": "voter",
+          "writable": true,
           "signer": true
         },
         {
@@ -169,6 +170,44 @@ export type Voting = {
         {
           "name": "candidate",
           "writable": true
+        },
+        {
+          "name": "voterRecord",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  111,
+                  116,
+                  101,
+                  114,
+                  95,
+                  114,
+                  101,
+                  99,
+                  111,
+                  114,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "poll.poll_id",
+                "account": "poll"
+              },
+              {
+                "kind": "account",
+                "path": "voter"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": []
@@ -199,6 +238,19 @@ export type Voting = {
         136,
         153,
         111
+      ]
+    },
+    {
+      "name": "voterRecord",
+      "discriminator": [
+        178,
+        96,
+        138,
+        116,
+        143,
+        202,
+        115,
+        33
       ]
     }
   ],
@@ -232,6 +284,11 @@ export type Voting = {
       "code": 6005,
       "name": "invalidCandidate",
       "msg": "Candidate can't be added once poll has started"
+    },
+    {
+      "code": 6006,
+      "name": "alreadyVoted",
+      "msg": "You have already voted in this poll"
     }
   ],
   "types": [
@@ -291,6 +348,22 @@ export type Voting = {
           {
             "name": "nextCandidateId",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "voterRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pollId",
+            "type": "u64"
+          },
+          {
+            "name": "voter",
+            "type": "pubkey"
           }
         ]
       }
