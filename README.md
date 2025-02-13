@@ -1,7 +1,7 @@
 # Voting dapp
+### Project Demo
 
-[![Video Demo](https://github.com/narasimha-1511/voting-dapp/blob/main/assets/demo.mp4)](https://github.com/narasimha-1511/voting-dapp/blob/main/assets/demo.mp4)
-
+https://github.com/user-attachments/assets/2ec67b2d-1e16-48cc-ac96-68971eafd62c
 
 ### Key Features
 - Create and manage voting accounts on Solana
