@@ -19,10 +19,6 @@ import { useEffect } from 'react'
 export function useGetBalance({ address }: { address: PublicKey }) {
   const { connection } = useConnection()
 
-  useEffect(() => {
-    console.log('connection', connection.rpcEndpoint)
-  }, [connection])
-
   return useQuery({
     queryKey: ['get-balance', { endpoint: connection.rpcEndpoint, address }],
     queryFn: () => connection.getBalance(address),

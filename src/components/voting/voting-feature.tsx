@@ -420,9 +420,15 @@ export function VotingFeature() {
         ...poll,
         candidates: candidatesByPollId[poll.account.pollId.toString('hex')] || []
       }));
+
+      const filteredPolls = pollsWithCandidates.filter(poll => {
+        return poll.candidates.length > 0
+      })
+
+      console.log("Filtered polls", filteredPolls);
       
       // Sort polls by start time, most recent first
-      const sortedPolls = pollsWithCandidates.sort((a, b) => 
+      const sortedPolls = filteredPolls.sort((a, b) => 
         b.account.pollStart.toNumber() - a.account.pollStart.toNumber()
       );
 
@@ -451,6 +457,11 @@ export function VotingFeature() {
     candidates: string[];
   }) => {
     try {
+      if (pollData.candidates.length < 2) {
+        setError('At least 2 candidates are required to create a poll');
+        return;
+      }
+
       setIsCreatingPoll(true);
       setCreatePollOpen(false);
       
@@ -472,21 +483,23 @@ export function VotingFeature() {
         program.programId
       );
 
-      const pollTx = await program.methods
-        .initializePoll(
-          pollData.description,
-          startTime,
-          endTime,
-          pollData.name
-        )
-        .accounts({
-          authority: publicKey,
-          poll: pollPda,
-          systemProgram: SystemProgram.programId,
-        })
-        .rpc();
-
-        console.log('poll created with pda', pollPda.toString())
+      try {
+        const pollTx = await program.methods
+          .initializePoll(
+            pollData.description,
+            startTime,
+            endTime,
+            pollData.name
+          )
+          .accounts({
+            authority: publicKey,
+            poll: pollPda,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc();
+      } catch (err) {
+        throw new Error('Failed to create poll. Please try again.');
+      }
 
       setTransactionStatus({
         status: 'confirming',
@@ -495,8 +508,6 @@ export function VotingFeature() {
 
       let pollAccount = await program.account.poll.fetch(pollPda);
 
-      console.log('poll account', pollAccount);
-
       // Create candidate accounts
       for (let i = 0; i < pollData.candidates.length; i++) {
         setTransactionStatus({
@@ -504,27 +515,31 @@ export function VotingFeature() {
           message: `Please sign transaction for candidate ${i + 1} of ${pollData.candidates.length}...`
         });
 
-        const candidateId = new BN(i + 1);
-        const [candidatePda] = PublicKey.findProgramAddressSync(
-          [
-            Buffer.from('candidate'),
-            pollPda.toBuffer(),
-            pollAccount.nextCandidateId.toArrayLike(Buffer, 'le', 8),
-          ],
-          program.programId
-        );
+        try {
+          const candidateId = new BN(i + 1);
+          const [candidatePda] = PublicKey.findProgramAddressSync(
+            [
+              Buffer.from('candidate'),
+              pollPda.toBuffer(),
+              pollAccount.nextCandidateId.toArrayLike(Buffer, 'le', 8),
+            ],
+            program.programId
+          );
 
-        await program.methods
-          .initializeCandidate(pollData.candidates[i])
-          .accounts({
-            authority: publicKey,
-            poll: pollPda,
-            candidate: candidatePda,
-            systemProgram: SystemProgram.programId,
-          })
-          .rpc();
+          await program.methods
+            .initializeCandidate(pollData.candidates[i])
+            .accounts({
+              authority: publicKey,
+              poll: pollPda,
+              candidate: candidatePda,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc();
 
           pollAccount = await program.account.poll.fetch(pollPda);
+        } catch (err) {
+          throw new Error('Failed to add candidates. A minimum of 2 candidates is required.');
+        }
       }
 
       setTransactionStatus({
@@ -532,16 +547,15 @@ export function VotingFeature() {
         message: 'Poll created successfully!'
       });
 
-      // Refresh polls after successful creation
       await fetchPolls();
       
     } catch (err) {
       console.error('Error creating poll:', err);
       setTransactionStatus({
         status: 'error',
-        message: 'Failed to create poll: ' + (err as Error).message
+        message: (err as Error).message || 'Failed to create poll'
       });
-      setError('Failed to create poll: ' + (err as Error).message);
+      setError((err as Error).message || 'Failed to create poll');
     } finally {
       setTimeout(() => {
         setIsCreatingPoll(false);
@@ -783,7 +797,7 @@ export function VotingFeature() {
                     Participants
                   </Typography>
                   <Typography variant="h6" sx={{ color: '#F1E3E4', fontWeight: 'bold' }}>
-                    1,234
+                    {polls.reduce((acc, poll) => acc + poll.account.candidateAmount.toNumber(), 0).toString()}
                   </Typography>
                 </Box>
               </Paper>
@@ -791,174 +805,190 @@ export function VotingFeature() {
           </Grid>
 
           <Grid container spacing={4}>
-            {polls.map((poll) => (
-              <Grid item xs={12} key={poll.publicKey.toString()}>
-                <Grow in timeout={1000}>
-                  <Card 
-                    elevation={5}
-                    sx={{ 
-                      background: 'rgba(44, 46, 53, 0.95)',
-                      borderRadius: 4,
-                      overflow: 'hidden',
-                      transition: 'all 0.3s ease',
-                      border: '1px solid rgba(162, 136, 166, 0.3)',
-                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                      '&:hover': {
-                        transform: 'translateY(-5px)',
-                        boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
-                      }
-                    }}
-                  >
-                    <CardContent sx={{ p: 4 }}>
-                      <Typography 
-                        variant="h4" 
-                        gutterBottom 
+            {polls.length > 0 && (
+              polls
+                .filter(poll => poll.candidates?.length >= 2) // Only show polls with 2 or more candidates
+                .map((poll) => (
+                  <Grid item xs={12} key={poll.publicKey.toString()}>
+                    <Grow in timeout={1000}>
+                      <Card 
+                        elevation={5}
                         sx={{ 
-                          color: '#F1E3E4',
-                          fontWeight: 'bold',
-                          mb: 3,
-                          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                          background: 'rgba(44, 46, 53, 0.95)',
+                          borderRadius: 4,
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
+                          border: '1px solid rgba(162, 136, 166, 0.3)',
+                          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                          '&:hover': {
+                            transform: 'translateY(-5px)',
+                            boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+                          }
                         }}
                       >
-                        {poll.account.name}
-                      </Typography>
-                      
-                      <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                        <Chip 
-                          label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
-                          sx={{ 
-                            borderRadius: 2, 
-                            px: 2,
-                            backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                            color: '#F1E3E4',
-                            fontWeight: 500,
-                            border: '1px solid rgba(162, 136, 166, 0.4)',
-                          }}
-                        />
-                        <Chip 
-                          label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
-                          sx={{ 
-                            borderRadius: 2, 
-                            px: 2,
-                            backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                            color: '#F1E3E4',
-                            fontWeight: 500,
-                            border: '1px solid rgba(162, 136, 166, 0.4)',
-                          }}
-                        />
-                        <Chip 
-                          label={`Total Votes: ${poll.account.candidateAmount.toString()}`}
-                          sx={{ 
-                            borderRadius: 2, 
-                            px: 2,
-                            backgroundColor: 'rgba(162, 136, 166, 0.2)',
-                            color: '#F1E3E4',
-                            fontWeight: 500,
-                            border: '1px solid rgba(162, 136, 166, 0.4)',
-                          }}
-                        />
-                      </Box>
-
-                      <Grid container spacing={3}>
-                        {poll.candidates?.map((candidate) => (
-                          <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
-                            <Paper 
-                              elevation={3}
+                        <CardContent sx={{ p: 4 }}>
+                          <Typography 
+                            variant="h4" 
+                            gutterBottom 
+                            sx={{ 
+                              color: '#F1E3E4',
+                              fontWeight: 'bold',
+                              mb: 3,
+                              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                            }}
+                          >
+                            {poll.account.name}
+                          </Typography>
+                          
+                          <Box sx={{ mb: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Chip 
+                              label={`Starts: ${new Date(poll.account.pollStart.toNumber() * 1000).toLocaleDateString()}`}
                               sx={{ 
-                                p: 3,
-                                height: '100%',
-                                background: 'rgba(28, 29, 33, 0.95)',
-                                borderRadius: 3,
-                                transition: 'all 0.3s ease',
-                                border: '1px solid rgba(162, 136, 166, 0.3)',
-                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
-                                '&:hover': {
-                                  transform: 'scale(1.02)',
-                                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
-                                }
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
                               }}
-                            >
-                              <Typography 
-                                variant="h5" 
-                                gutterBottom 
-                                sx={{ 
-                                  color: '#F1E3E4',
-                                  fontWeight: 'bold',
-                                  mb: 2,
-                                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                                }}
-                              >
-                                {candidate.candidateName}
-                              </Typography>
-                              <Typography 
-                                variant="body1" 
-                                sx={{ 
-                                  color: '#CCBCBC',
-                                  mb: 3,
-                                  lineHeight: 1.6
-                                }}
-                              >
-                                {candidate.candidateDescription}
-                              </Typography>
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                mt: 'auto'
-                              }}>
-                                <Typography 
-                                  variant="h6" 
+                            />
+                            <Chip 
+                              label={`Ends: ${new Date(poll.account.pollEnd.toNumber() * 1000).toLocaleDateString()}`}
+                              sx={{ 
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
+                              }}
+                            />
+                            <Chip 
+                              label={`Total Votes: ${poll.account.candidateAmount.toString()}`}
+                              sx={{ 
+                                borderRadius: 2, 
+                                px: 2,
+                                backgroundColor: 'rgba(162, 136, 166, 0.2)',
+                                color: '#F1E3E4',
+                                fontWeight: 500,
+                                border: '1px solid rgba(162, 136, 166, 0.4)',
+                              }}
+                            />
+                          </Box>
+
+                          <Grid container spacing={3}>
+                            {poll.candidates?.map((candidate) => (
+                              <Grid item xs={12} sm={6} key={candidate.publicKey.toString()}>
+                                <Paper 
+                                  elevation={3}
                                   sx={{ 
-                                    color: '#A288A6',
-                                    fontWeight: 600,
-                                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                                  }}
-                                >
-                                  {candidate.candidateVotes.toString()} votes
-                                </Typography>
-                                <Button 
-                                  variant="contained" 
-                                  size="large"
-                                  onClick={() => handleVote(poll.account.pollId, candidate.candidateId.toNumber())}
-                                  disabled={
-                                    !publicKey || 
-                                    Date.now() < poll.account.pollStart.toNumber() * 1000 || 
-                                    Date.now() > poll.account.pollEnd.toNumber() * 1000
-                                  }
-                                  sx={{ 
-                                    borderRadius: 2,
-                                    px: 4,
-                                    py: 1.5,
-                                    textTransform: 'none',
-                                    fontSize: '1.1rem',
-                                    fontWeight: 'bold',
-                                    backgroundColor: '#A288A6',
-                                    color: '#1C1D21',
-                                    boxShadow: '0 4px 15px rgba(162, 136, 166, 0.3)',
+                                    p: 3,
+                                    height: '100%',
+                                    background: 'rgba(28, 29, 33, 0.95)',
+                                    borderRadius: 3,
+                                    transition: 'all 0.3s ease',
+                                    border: '1px solid rgba(162, 136, 166, 0.3)',
+                                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                                     '&:hover': {
-                                      backgroundColor: '#BB9BB0',
-                                      transform: 'translateY(-2px)',
-                                      boxShadow: '0 6px 20px rgba(162, 136, 166, 0.4)',
-                                    },
-                                    '&:disabled': {
-                                      backgroundColor: 'rgba(204, 188, 188, 0.2)',
-                                      color: '#CCBCBC',
+                                      transform: 'scale(1.02)',
+                                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
                                     }
                                   }}
                                 >
-                                  Vote
-                                </Button>
-                              </Box>
-                            </Paper>
+                                  <Typography 
+                                    variant="h5" 
+                                    gutterBottom 
+                                    sx={{ 
+                                      color: '#F1E3E4',
+                                      fontWeight: 'bold',
+                                      mb: 2,
+                                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                    }}
+                                  >
+                                    {candidate.candidateName}
+                                  </Typography>
+                                  <Typography 
+                                    variant="body1" 
+                                    sx={{ 
+                                      color: '#CCBCBC',
+                                      mb: 3,
+                                      lineHeight: 1.6
+                                    }}
+                                  >
+                                    {candidate.candidateDescription}
+                                  </Typography>
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    mt: 'auto'
+                                  }}>
+                                    <Typography 
+                                      variant="h6" 
+                                      sx={{ 
+                                        color: '#A288A6',
+                                        fontWeight: 600,
+                                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                                      }}
+                                    >
+                                      {candidate.candidateVotes.toString()} votes
+                                    </Typography>
+                                    <Button 
+                                      variant="contained" 
+                                      size="large"
+                                      onClick={() => handleVote(poll.account.pollId, candidate.candidateId.toNumber())}
+                                      disabled={
+                                        !publicKey || 
+                                        Date.now() < poll.account.pollStart.toNumber() * 1000 || 
+                                        Date.now() > poll.account.pollEnd.toNumber() * 1000
+                                      }
+                                      sx={{ 
+                                        borderRadius: 2,
+                                        px: 4,
+                                        py: 1.5,
+                                        textTransform: 'none',
+                                        fontSize: '1.1rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: '#A288A6',
+                                        color: '#1C1D21',
+                                        boxShadow: '0 4px 15px rgba(162, 136, 166, 0.3)',
+                                        '&:hover': {
+                                          backgroundColor: '#BB9BB0',
+                                          transform: 'translateY(-2px)',
+                                          boxShadow: '0 6px 20px rgba(162, 136, 166, 0.4)',
+                                        },
+                                        '&:disabled': {
+                                          backgroundColor: 'rgba(204, 188, 188, 0.2)',
+                                          color: '#CCBCBC',
+                                        }
+                                      }}
+                                    >
+                                      Vote
+                                    </Button>
+                                  </Box>
+                                </Paper>
+                              </Grid>
+                            ))}
                           </Grid>
-                        ))}
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                </Grow>
-              </Grid>
-            ))}
+                        </CardContent>
+                      </Card>
+                    </Grow>
+                  </Grid>
+                ))
+            )}
           </Grid>
+
+          {(!polls.length || !polls.some(poll => poll.candidates?.length >= 2)) && (
+            <Box sx={{ 
+              textAlign: 'center', 
+              py: 8,
+              color: '#CCBCBC'
+            }}>
+              <Typography variant="h6">
+                No active polls found.
+              </Typography>
+            </Box>
+          )}
         </Box>
       )}
       
